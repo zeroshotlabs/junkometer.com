@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Junkometer - Measure Website Bloat, JavaScript Waste & Page Performance | Free Tool</title>
+  <meta name="description" content="Free bookmarklet to instantly measure website bloat. See how much JavaScript, ads, and trackers vs. real content. Privacy-first, runs in your browser. No installation required." />
+  <meta name="keywords" content="website performance, javascript bloat, page speed, web performance tool, bookmarklet, privacy tools, ad tracker detector" />
+  <!-- Slick, modern SVG favicon (inline data URI) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='44' width='48' height='10' rx='5' fill='%2336d07b'/%3E%3Cellipse cx='32' cy='28' rx='20' ry='16' fill='%232ab5f5'/%3E%3Ctext x='32' y='36' text-anchor='middle' font-family='Arial, sans-serif' font-size='22' font-weight='bold' fill='white'%3EJ%3C/text%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #0c0f12;
+      --bg-soft: #12161b;
+      --text: #e7ecf2;
+      --muted: #aab7c5;
+      --brand: #36d07b;
+      --brand-2: #2ab5f5;
+      --card: #0f1317;
+      --ring: rgba(54,208,123,.45);
+      --ok: #36d07b;
+      --warn: #ffb84d;
+      --bad: #ff6b6b;
+      --border: rgba(255,255,255,.08);
+      --shadow: 0 8px 40px rgba(0,0,0,.25);
+      color-scheme: dark light;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f7fafc;
+        --bg-soft: #ffffff;
+        --text: #14171a;
+        --muted: #4a5568;
+        --card: #ffffff;
+        --ring: rgba(42,181,245,.35);
+        --border: rgba(0,0,0,.08);
+        --shadow: 0 8px 40px rgba(0,0,0,.1);
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100vh;
+      background: 
+        radial-gradient(1200px 800px at 80% -10%, rgba(42,181,245,.10), transparent 60%),
+        radial-gradient(1000px 1000px at -10% 110%, rgba(54,208,123,.10), transparent 60%), 
+        var(--bg);
+      color: var(--text);
+      font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    }
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      display: grid;
+      place-items: center;
+      box-shadow: 0 6px 30px rgba(42,181,245,.25);
+    }
+    .logo-icon svg {
+      width: 32px;
+      height: 32px;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,.25));
+    }
+    .wordmark {
+      font-weight: 900;
+      font-size: 2.1rem;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+    }
+    .wordmark .special-o {
+      color: var(--brand-2);
+      font-size: 1.2em;
+      margin: 0 -2px;
+      font-family: 'Arial Black', Arial, sans-serif;
+      text-shadow: 0 2px 8px var(--brand-2), 0 0 2px #fff;
+      transform: rotate(-8deg) scale(1.1,1.05);
+      display: inline-block;
+    }
+    .badge {
+      font-size: 14px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.02);
+      font-weight: 600;
+    }
+    .hero {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+    .headline {
+      font-size: clamp(2.2rem, 5vw, 3.5rem);
+      line-height: 1.1;
+      margin: 0 0 20px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      word-break: break-word;
+      max-width: 100%;
+      display: inline-block;
+    }
+    .subhead {
+      color: var(--muted);
+      font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+      line-height: 1.5;
+      margin: 0 auto 36px;
+      max-width: 600px;
+      text-align: center;
+      word-break: break-word;
+    }
+    .metrics {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 32px 0;
+    }
+    .metric-chip {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      padding: 12px 20px;
+      border-radius: 16px;
+      font-weight: 600;
+    }
+    .cta-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 32px 12px;
+      margin: 40px 0;
+      box-shadow: var(--shadow);
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .cta-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0 0 12px;
+      text-align: center;
+    }
+    .cta-subtitle {
+      color: var(--muted);
+      font-size: 1.1rem;
+      margin: 0 0 28px;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: 16px;
+      padding: 16px 32px;
+      font-weight: 700;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-primary {
+      background: linear-gradient(180deg, var(--brand), #1bbd67);
+      color: #0b1116;
+      box-shadow: 0 10px 30px var(--ring);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 40px var(--ring);
+      text-decoration: none;
+    }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 2px solid var(--border);
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,.05);
+      text-decoration: none;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 32px;
+      margin: 48px 0;
+    }
+    .step {
+      text-align: center;
+      padding: 32px 24px;
+    }
+    .step-number {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: white;
+      margin: 0 auto 24px;
+      box-shadow: 0 8px 25px rgba(42,181,245,.3);
+    }
+    .step-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 12px;
+    }
+    .step-description {
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: var(--shadow);
+    }
+    .card h2 {
+      margin: 0 0 16px;
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .card p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 65ch;
+    }
+    .card p:last-child {
+      margin-bottom: 0;
+    }
+    .card ul, .card ol {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--muted);
+    }
+    .card li {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 32px;
+      margin: 48px 0;
+    }
+    .code-block {
+      background: rgba(0,0,0,.4);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin: 24px 0;
+      overflow-x: auto;
+      position: relative;
+    }
+    .code-block pre {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.4;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    .code-block code {
+      font-family: inherit;
+    }
+    .footer {
+      text-align: center;
+      padding: 48px 0;
+      margin-top: 80px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+    }
+    @media (max-width: 768px) {
+      .container { padding: 0 8px; }
+      .header { flex-direction: column; gap: 10px; text-align: center; }
+      .cta-section { padding: 18px 4px; }
+      .steps { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .logo-icon { width: 38px; height: 38px; }
+      .wordmark { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <a class="logo" href="#" aria-label="Junkometer home">
+        <span class="logo-icon" aria-hidden="true">
+          <!-- Slick, modern SVG logo -->
+          <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img">
+            <ellipse cx="24" cy="20" rx="16" ry="12" fill="#2ab5f5"/>
+            <rect x="8" y="32" width="32" height="8" rx="4" fill="#36d07b"/>
+            <text x="24" y="27" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="18" font-weight="bold" fill="white">J</text>
+          </svg>
+        </span>
+        <span class="wordmark">Junk<span class="special-o">O</span>meter</span>
+      </a>
+      <span class="badge" aria-label="mission">Measure waste. Save time. Help friends.</span>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+      <h1 class="headline">Instantly measure website bloat &mdash; see what&rsquo;s really slowing you down.</h1>
+      <p class="subhead">Modern websites average 68% waste: ads, trackers, and unnecessary JavaScript. Junkometer reveals the real content-to-bloat ratio on any page in seconds.</p>
+      <div class="metrics">
+        <span class="metric-chip" title="Average website waste ratio"><strong>Avg Waste</strong> 68%</span>
+        <span class="metric-chip" title="Average script count"><strong>Scripts</strong> 20-30+</span>
+        <span class="metric-chip" title="Typical real content"><strong>Content</strong> ~32%</span>
+      </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="cta-section">
+      <h2 class="cta-title">Get Started in 30 Seconds</h2>
+      <p class="cta-subtitle">Choose your format: Copy the bookmarklet URL or download the JavaScript file. Either way, you&rsquo;ll be measuring web bloat in under a minute.</p>
+      <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+        <button id="copyBookmarklet" class="btn btn-primary" type="button">Copy Bookmarklet URL</button>
+        <button id="downloadJS" class="btn btn-secondary" type="button">Download junkometer.js</button>
+      </div>
+    </section>
+
+    <!-- How It Works Steps -->
+    <section id="how-it-works" class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3 class="step-title">Get the Tool</h3>
+        <p class="step-description">Copy the bookmarklet URL or download the .js file. Both are free, open source, and work identically.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3 class="step-title">Install in Browser</h3>
+        <p class="step-description">Add as a bookmark (paste URL) or drag .js to bookmarks bar. Works in Chrome, Firefox, Safari, Edge.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3 class="step-title">Analyze Any Page</h3>
+        <p class="step-description">Click the bookmark on any website. Get instant results showing JavaScript, CSS/HTML, and content ratios.</p>
+      </div>
+    </section>
+
+    <!-- Features Grid -->
+    <section class="grid">
+      <article class="card">
+        <h2>🔒 Privacy First</h2>
+        <p>Runs entirely in your browser &mdash; no data leaves the page you&rsquo;re analyzing. No cookies, no analytics, no tracking.</p>
+        <ul>
+          <li>100% client-side analysis</li>
+          <li>No external requests</li>
+          <li>Complete anonymity</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h2>⚡ Instant Results</h2>
+        <p>Get detailed insights in seconds. See exactly how much of each page is real content versus bloat.</p>
+        <ul>
+          <li>JavaScript vs. content ratio</li>
+          <li>File-by-file breakdown</li>
+          <li>Visual progress indicators</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h2>🌐 Universal Compatibility</h2>
+        <p>Works on any website, in any modern browser. No installation required, just drag and drop.</p>
+        <ul>
+          <li>Chrome, Firefox, Safari, Edge</li>
+          <li>Desktop and mobile browsers</li>
+          <li>Works on any domain</li>
+        </ul>
+      </article>
+    </section>
+
+    <!-- Mission Statement -->
+    <section class="card" style="text-align: center; max-width: 900px; margin: 48px auto;">
+      <h2>Our Mission: Make Web Waste Visible</h2>
+      <p style="font-size: 20px; line-height: 1.6; max-width: 70ch; margin: 0 auto 24px;">Modern websites have become bloated with ads, trackers, and unnecessary JavaScript. The average webpage is now <strong>68% waste</strong> &mdash; only 32% is actual content that users came to see.</p>
+      <p style="font-size: 18px; line-height: 1.6; max-width: 60ch; margin: 0 auto 32px;">Junkometer makes this invisible problem visible. When we can see the waste, we can start building a faster, more respectful web.</p>
+      <div class="metrics">
+        <span class="metric-chip"><strong>Goal:</strong> Faster Web</span>
+        <span class="metric-chip"><strong>Method:</strong> Transparency</span>
+        <span class="metric-chip"><strong>Result:</strong> Better UX</span>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Junkometer &bull; Built to highlight inefficiency &mdash; so we can build a faster web.</p>
+    </footer>
+
+    <!-- Code Section -->
+    <section id="source-code" class="card" style="max-width: 1000px; margin: 48px auto;">
+      <h2>Open Source & Transparent</h2>
+      <p style="text-align: center; max-width: 60ch; margin: 0 auto 24px;">The complete Junkometer source code is below. Zero hidden functionality. Review every line before using.</p>
+      <div class="code-block">
+        <pre id="code-content" style="margin: 0; font-size: 13px; line-height: 1.5; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word;"><code>Loading source code...</code></pre>
+      </div>
+    </section>
+  </div>
+
+  <!-- Embed the bookmarklet JS as plain text for use in code display and copy -->
+  <script type="text/plain" id="junkometer-js">
+javascript:(function() {
+  // Load tracking library
+  const trackingScript = document.createElement('script');
+  trackingScript.src = '/src/lib.js';
+  document.head.appendChild(trackingScript);
+
+  const pageAnalyzer = {
+    init: function() {
+      this.createLoadingVisualization();
+      this.analyze();
+    },
+    createLoadingVisualization: function() {
+      this.container = document.createElement('div');
+      this.container.style.cssText = 'position: fixed;top: 20px;right: 20px;background: rgba(0,0,0,0.9);color: white;padding: 20px;border-radius: 8px;font-family: monospace;z-index: 2147483647;width: 350px;max-height: 500px;overflow-y: auto;box-shadow: 0 0 20px rgba(0,0,0,0.5);';
+      this.container.innerHTML = '<div style="font-size: 16px; margin-bottom: 15px; text-align: center;">⏳ Analyzing Page...</div><div id="fileList" style="font-size: 11px; max-height: 200px; overflow-y: auto; margin-bottom: 15px;"></div><div style="text-align: center; font-size: 12px; opacity: 0.7;">Processing resources...</div>';
+      document.body.appendChild(this.container);
+      this.fileListEl = this.container.querySelector('#fileList');
+    },
+    addFileEntry: function(filename, type, success = true) {
+      const entry = document.createElement('div');
+      entry.style.cssText = 'margin-bottom: 4px;padding: 2px 4px;background: ' + (success ? 'rgba(80,200,120,0.1)' : 'rgba(255,107,107,0.1)') + ';border-left: 3px solid ' + (success ? '#50c878' : '#ff6b6b') + ';word-break: break-all;';
+      let displayName = filename;
+      try {
+        const url = new URL(filename, window.location.href);
+        displayName = url.pathname.split('/').pop() || url.hostname;
+      } catch(e) {}
+      entry.innerHTML = '<span style="color: ' + (success ? '#50c878' : '#ff6b6b') + '">' + (success ? '✓' : '✗') + '</span><span style="margin-left: 5px;">' + displayName + '</span><span style="float: right; opacity: 0.6; font-size: 10px;">' + type + '</span>';
+      this.fileListEl.appendChild(entry);
+      this.fileListEl.scrollTop = this.fileListEl.scrollHeight;
+    },
+    getJavaScript: async function() {
+      const scripts = document.getElementsByTagName('script');
+      let totalSize = 0;
+      for(let script of scripts) {
+        if(script.src) {
+          try {
+            const response = await fetch(script.src);
+            const text = await response.text();
+            totalSize += new Blob([text]).size;
+            this.addFileEntry(script.src, 'JS', true);
+          } catch(e) {
+            this.addFileEntry(script.src, 'JS', false);
+            console.warn('Could not fetch:', script.src, e.message);
+          }
+        } else {
+          totalSize += new Blob([script.innerHTML]).size;
+          this.addFileEntry('(inline script)', 'JS', true);
+        }
+      }
+      return totalSize;
+    },
+    getCSS: async function() {
+      const links = document.getElementsByTagName('link');
+      const styles = document.getElementsByTagName('style');
+      let totalSize = 0;
+      for(let link of links) {
+        if(link.rel === 'stylesheet') {
+          try {
+            const response = await fetch(link.href);
+            const text = await response.text();
+            totalSize += new Blob([text]).size;
+            this.addFileEntry(link.href, 'CSS', true);
+          } catch(e) {
+            this.addFileEntry(link.href, 'CSS', false);
+            console.warn('Could not fetch:', link.href, e.message);
+          }
+        }
+      }
+      for(let style of styles) {
+        totalSize += new Blob([style.innerHTML]).size;
+        this.addFileEntry('(inline styles)', 'CSS', true);
+      }
+      totalSize += new Blob([document.documentElement.outerHTML]).size;
+      this.addFileEntry(window.location.pathname || 'index.html', 'HTML', true);
+      return totalSize;
+    },
+    getReadableText: function() {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {acceptNode: function(node) {if(node.parentElement.tagName === 'SCRIPT' || node.parentElement.tagName === 'STYLE') {return NodeFilter.FILTER_REJECT;}return node.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;}});
+      let text = '';
+      while(walker.nextNode()) {text += walker.currentNode.textContent.trim() + ' ';}
+      this.addFileEntry('(text content)', 'TXT', true);
+      return new Blob([text]).size;
+    },
+    calculatePercentages: function(js, css, text) {
+      const total = js + css + text;
+      return {
+        javascript: {raw: Math.round(js / 1024),percent: Math.round((js / total) * 1000) / 10},
+        cssHtml: {raw: Math.round(css / 1024),percent: Math.round((css / total) * 1000) / 10},
+        readableText: {raw: Math.round(text / 1024),percent: Math.round((text / total) * 1000) / 10},
+        url: window.location.href,
+        timestamp: new Date().toISOString()
+      };
+    },
+    showCopiedNotice: function() {
+      const notice = document.createElement('div');
+      notice.style.cssText = 'position: fixed;top: 20px;right: 380px;background: #4a90e2;color: white;padding: 10px 20px;border-radius: 4px;font-family: monospace;z-index: 2147483648;opacity: 0;transition: opacity 0.3s ease-in-out;';
+      notice.textContent = 'JSON copied to clipboard! 📋';
+      document.body.appendChild(notice);
+      setTimeout(() => notice.style.opacity = '1', 0);
+      setTimeout(() => {notice.style.opacity = '0';setTimeout(() => document.body.removeChild(notice), 300);}, 1000);
+    },
+    updateVisualization: function(results) {
+      const totalKB = results.javascript.raw + results.cssHtml.raw + results.readableText.raw;
+      this.container.innerHTML = '<div style="font-size: 16px; margin-bottom: 15px; text-align: center;">Page Weight: ' + totalKB + 'KB <span style="font-size: 12px; opacity: 0.7">' + (totalKB > 2000 ? '😰 Heavy' : totalKB > 1000 ? '😐 Medium' : '😊 Light') + '</span></div><div id="fileList" style="font-size: 11px; max-height: 150px; overflow-y: auto; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); padding: 5px; border-radius: 4px;">' + this.fileListEl.innerHTML + '</div><div style="margin-bottom: 20px;"><div style="margin-bottom: 10px;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>JavaScript</span><span>' + results.javascript.raw + 'KB (' + results.javascript.percent + '%)</span></div><div style="width: 100%; height: 20px; background: #1a1a1a; border-radius: 10px; overflow: hidden;"><div style="width: ' + results.javascript.percent + '%; height: 100%; background: #4a90e2; transition: width 1s ease-out;"></div></div></div><div style="margin-bottom: 10px;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>CSS/HTML</span><span>' + results.cssHtml.raw + 'KB (' + results.cssHtml.percent + '%)</span></div><div style="width: 100%; height: 20px; background: #1a1a1a; border-radius: 10px; overflow: hidden;"><div style="width: ' + results.cssHtml.percent + '%; height: 100%; background: #50c878; transition: width 1s ease-out;"></div></div></div><div><div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Content</span><span>' + results.readableText.raw + 'KB (' + results.readableText.percent + '%)</span></div><div style="width: 100%; height: 20px; background: #1a1a1a; border-radius: 10px; overflow: hidden;"><div style="width: ' + results.readableText.percent + '%; height: 100%; background: #ff6b6b; transition: width 1s ease-out;"></div></div></div></div><div style="text-align: center; font-size: 32px; margin-top: 15px;">' + Array(Math.ceil(totalKB/500)).fill('🏋️').join('') + '</div><button id="copyJsonBtn" style="width: 100%;margin-top: 15px;padding: 8px;background: #4a90e2;border: none;border-radius: 4px;color: white;cursor: pointer;font-family: monospace;transition: background 0.3s;">Copy JSON Data</button><div style="font-size: 10px; margin-top: 10px; text-align: center; opacity: 0.7;">Click anywhere outside buttons to close</div>';
+      const copyBtn = this.container.querySelector('#copyJsonBtn');
+      copyBtn.onclick = (e) => {e.stopPropagation();navigator.clipboard.writeText(JSON.stringify(results, null, 2)).then(() => this.showCopiedNotice()).catch(err => console.error('Failed to copy:', err));};
+      this.container.onclick = function(e) {if(e.target === this || (e.target.tagName !== 'BUTTON' && !e.target.closest('#fileList'))) {document.body.removeChild(this);}}.bind(this.container);
+    },
+    analyze: async function() {
+      try {
+        const jsSize = await this.getJavaScript();
+        const cssSize = await this.getCSS();
+        const textSize = this.getReadableText();
+        const results = this.calculatePercentages(jsSize, cssSize, textSize);
+        if(window.junkometerTracking && window.junkometerTracking.trackScan) {
+          try {
+            window.junkometerTracking.trackScan(results);
+          } catch(trackingError) {
+            console.warn('Tracking failed:', trackingError);
+          }
+        }
+        this.updateVisualization(results);
+      } catch(e) {
+        console.error('Analysis failed:', e);
+        if(window.junkometerTracking && window.junkometerTracking.trackError) {
+          window.junkometerTracking.trackError(e, 'page-analysis');
+        }
+        this.container.innerHTML = '<div style="color: #ff6b6b; text-align: center; padding: 20px;">Analysis failed: ' + e.message + '</div>';
+      }
+    }
+  };
+  pageAnalyzer.init();
+})();
+  </script>
+
+  <script>
+    // js2let-style minification for browser
+    function minifyForBookmarklet(code) {
+      return code
+        // Remove blank lines
+        .replace(/^\s*[\r\n]/gm, '')
+        // Convert multiple spaces to single space
+        .replace(/[ \t]+/g, ' ')
+        // Trim lines and join with space
+        .split('\n').map(line => line.trim()).join(' ');
+    }
+
+    // Convert to bookmarklet format
+    function toBookmarklet(code) {
+      const minified = minifyForBookmarklet(code);
+      return 'javascript:' + encodeURIComponent(minified);
+    }
+
+    // Load and display source code (plain text, no HTML tags)
+    function loadSourceCode() {
+      const codeContent = document.getElementById('code-content');
+      const jsCode = document.getElementById('junkometer-js').textContent.trim();
+      const displayCode = jsCode.replace(/^javascript:/, '');
+
+      // Create text node to avoid HTML injection
+      const codeElement = codeContent.querySelector('code');
+      codeElement.textContent = displayCode;
+    }
+
+    // Copy bookmarklet URL to clipboard
+    async function copyBookmarkletURL() {
+      const copyBtn = document.getElementById('copyBookmarklet');
+      const jsCode = document.getElementById('junkometer-js').textContent.trim();
+
+      // Get raw code without javascript: prefix
+      const rawCode = jsCode.replace(/^javascript:/, '');
+
+      // Convert to bookmarklet format
+      const bookmarkletURL = toBookmarklet(rawCode);
+
+      try {
+        await navigator.clipboard.writeText(bookmarkletURL);
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = '✓ Copied!';
+        copyBtn.style.background = 'linear-gradient(180deg, #36d07b, #1bbd67)';
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+          copyBtn.style.background = '';
+        }, 2000);
+      } catch (err) {
+        alert('Copy failed: ' + err.message);
+      }
+    }
+
+    // Download junkometer.js file
+    async function downloadJunkometerJS() {
+      const downloadBtn = document.getElementById('downloadJS');
+      const jsCode = document.getElementById('junkometer-js').textContent.trim();
+      const rawCode = jsCode.replace(/^javascript:/, '');
+
+      // Create blob and download
+      const blob = new Blob([rawCode], { type: 'application/javascript' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'junkometer.js';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      // Visual feedback
+      const originalText = downloadBtn.textContent;
+      downloadBtn.textContent = '✓ Downloaded!';
+      setTimeout(() => {
+        downloadBtn.textContent = originalText;
+      }, 2000);
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      loadSourceCode();
+
+      // Attach event handlers
+      document.getElementById('copyBookmarklet').addEventListener('click', copyBookmarkletURL);
+      document.getElementById('downloadJS').addEventListener('click', downloadJunkometerJS);
+    });
+  </script>
+  <noscript>Your browser has JavaScript disabled; bookmarklets require JavaScript to run.</noscript>
+</body>
+</html>
